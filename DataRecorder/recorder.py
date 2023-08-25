@@ -15,7 +15,7 @@ from tkinter import Tk, Button, Label, Frame, IntVar, Radiobutton
 ## CONFIGS
 # directory for saving data
 data_path = 'D:/Downloads 2/Andre_Thesis/Data/WOLF_dataset'
-file_name = 'Subject_3'
+file_name = 'Subject_10'
 
 # directory with arousal.png and valence.png
 selfeval_imgs_path = "D:/Downloads 2/Andre_Thesis/DataRecorder/selfeval_imgs"
@@ -224,7 +224,7 @@ emotibit.start_stream()
 ultracortex.start_stream()
 
 t0= time.time() # get start unix time
-ultracortex.insert_marker(1)
+#ultracortex.insert_marker(1)
 
 # Start mouse listener
 listener.start()
@@ -364,13 +364,6 @@ df_self.to_csv(folder_path + '/' + file_name + "_selfeval.csv")
 print(f'\nt0 = {t0} \nt1 = {t1}')
 print(f'total duration: {aux[-1,0]-aux[0,0]}')
 print('\n###\nEND\n###\n')
-
-
-
-
-
-
-
 
 
 """
