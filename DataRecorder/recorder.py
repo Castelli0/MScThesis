@@ -15,7 +15,7 @@ from tkinter import Tk, Button, Label, Frame, IntVar, Radiobutton
 ## CONFIGS
 # directory for saving data
 data_path = 'D:/Downloads 2/Andre_Thesis/Data/WOLF_dataset'
-file_name = 'Subject_10'
+file_name = 'Subject_12'
 
 # directory with arousal.png and valence.png
 selfeval_imgs_path = "D:/Downloads 2/Andre_Thesis/DataRecorder/selfeval_imgs"
@@ -324,7 +324,7 @@ for i in range(1,3):
 data = data[:, [3,4,5,6,7,8,9,10,11,0,1,2,12,13]]
 
 # save data to DataFrame
-df = pd.DataFrame(data, columns = ['accel_X', 'accel_Y', 'accel_Z', 
+df_emotibit = pd.DataFrame(data, columns = ['accel_X', 'accel_Y', 'accel_Z', 
                                      'gyro_X', 'gyro_y', 'gyro_Z', 
                                      'mag_X', 'mag_y', 'mag_Z',
                                      'ppg_1', 'ppg_2', 'ppg_3',
@@ -332,9 +332,9 @@ df = pd.DataFrame(data, columns = ['accel_X', 'accel_Y', 'accel_Z',
 
 # ULTRACORTEX
 # save eeg to DataFrame
-df_eeg = pd.DataFrame(columns = BoardShim.get_eeg_names(BoardIds.CYTON_DAISY_BOARD.value))
-for i, channel in enumerate(df_eeg.columns):
-    df_eeg[channel] = ultracortex_data[:,i+1]
+df_ultracortex = pd.DataFrame(columns = BoardShim.get_eeg_names(BoardIds.CYTON_DAISY_BOARD.value))
+for i, channel in enumerate(df_ultracortex.columns):
+    df_ultracortex[channel] = ultracortex_data[:,i+1]
 
 # AUX
 aux = np.array(aux)
@@ -348,18 +348,18 @@ df_aux['y_mouse'] = aux[:,2]
 #adding start and end times
 df_aux.loc[-1] = [t0, 0, 0, 'nan', 'nan']
 df_aux = df_aux.sort_index().reset_index(drop=True)
-df_aux.loc[len(df_aux)] = [t1, len(df_eeg), len(df), 'nan', 'nan']
+df_aux.loc[len(df_aux)] = [t1, len(df_ultracortex), len(df_emotibit), 'nan', 'nan']
 
 # SELF EVALUATION
-df_self = pd.DataFrame(selfeval, columns = ['popup_time','submit_time','arousal', 'valence', 'dominance'])
+df_selfeval = pd.DataFrame(selfeval, columns = ['popup_time','submit_time','arousal', 'valence', 'dominance'])
 
 # SAVING
 folder_path = create_saving_folder(data_path, file_name)
 
-df.to_csv(folder_path + '/' + file_name + "_emotibit.csv")
-df_eeg.to_csv(folder_path + '/' + file_name + "_ultracortex.csv")
+df_emotibit.to_csv(folder_path + '/' + file_name + "_emotibit.csv")
+df_ultracortex.to_csv(folder_path + '/' + file_name + "_ultracortex.csv")
 df_aux.to_csv(folder_path + '/' + file_name + "_aux.csv")
-df_self.to_csv(folder_path + '/' + file_name + "_selfeval.csv")
+df_selfeval.to_csv(folder_path + '/' + file_name + "_selfeval.csv")
 
 print(f'\nt0 = {t0} \nt1 = {t1}')
 print(f'total duration: {aux[-1,0]-aux[0,0]}')
