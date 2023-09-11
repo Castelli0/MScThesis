@@ -44,7 +44,7 @@ def get_trial_eeg(data, trial_index=0):
 
     return eeg_data
 
-data, subject_count, trial_count = dreamer_to_np('C:/Users/andre/Documents/Kortek/DREAMER/DREAMER.mat')
+data, subject_count, trial_count = dreamer_to_np('D:/Downloads 2/Andre_Thesis/Archive/DREAMER.mat')
 
 eeg = np.array(data[:,:,1], dtype=object)
 

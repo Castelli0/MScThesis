@@ -4,7 +4,11 @@ from scipy import diag as sp_diag
 import matplotlib.pyplot as plt
 import mne
 import pandas as pd
-from dreamer_read import get_trial_eeg, data
+from dreamer_read import get_trial_eeg, dreamer_to_np
+#from epoching_eeg import get_data
+#from epoching_eeg import epochs
+#from eeg_preprocess import eeg, eeg_filt, eeg_clean
+
 # Correlated Component Analysis (CorrCA) method based on
 # original matlab code from Parra's lab (https://www.parralab.org/corrca/).
 # original python code from Renzo Comolatti (https://github.com/renzocom/CorrCA/blob/master/CorrCA.py)
@@ -346,7 +350,7 @@ def CorrCA(X, W=None, version=2, gamma=0, k=None):
 
 #
 
-def get_rolling_ISC(X, fs=128, k=None, window_s=5, overlap=0.8):
+def get_rolling_ISC(X, fs=125, k=None, window_s=5, overlap=0.8):
     _, num_channels, num_samples = X.shape
     # Calculate the number of windows based on the window size and overlap
     window_size = window_s * fs
@@ -381,11 +385,24 @@ def count_signif_windows(ISC_values, thr):
     return count, percentage
 
 def main():
+    epochs = np.load('D:/Downloads 2/Andre_Thesis/Data/WOLF_eeg_preprocess/epochs.npy')
+    epochs_filt = np.load('D:/Downloads 2/Andre_Thesis/Data/WOLF_eeg_preprocess/epochs_filt.npy')
+    #epochs_clean = np.load('D:/Downloads 2/Andre_Thesis/Data/WOLF_eeg_preprocess/epochs_clean.npy')
+    
+    epochs_nobads = np.load('D:/Downloads 2/Andre_Thesis/Data/WOLF_eeg_preprocess/epochs_nobads.npz', allow_pickle=True)
+    epochs_nobads = [epochs_nobads[subject] for subject in epochs_nobads]
+    epochs_nobads.pop(9)
+    
+    epochs_clean = np.load('D:/Downloads 2/Andre_Thesis/Data/WOLF_eeg_preprocess/epochs_ica_clean.npy', allow_pickle=True)
+    
+    #dreamer,_,_ = dreamer_to_np('D:/Downloads 2/Andre_Thesis/Archive/DREAMER.mat')
+    
     # Set EEG info
-    fs = 128
-    ch_names = ['AF3', 'AF4', 'F7', 'F3', 'F4',
-              'F8', 'FC5', 'FC6', 'T7', 'T8',
-              'P7', 'P8', 'O1', 'O2']
+    fs = 125
+    #ch_names = ['AF3','AF4', 'F3', 'F4', 'F7', 'F8', 'FC5', 'FC6',
+    #                          'P7', 'P8', 'T7', 'T8', 'O1', 'O2']
+    ch_names = ['Fp1','Fp2','C3','C4','P7', 'P8', 'O1', 'O2', 'F7', 'F8', 'F3',
+          'F4', 'T7', 'T8','P3','P4']
     mont = mne.channels.make_standard_montage("standard_1020")
     #mont.plot()
 
@@ -398,16 +415,123 @@ def main():
     # Set plotting style to default for plotting with MNE functions
     plt.style.use('default')
     map_info = info
-
-
-    # Rolling ISC
-    for trial in range(2):#len(data[0])):
+    
+    a=[]
+    b=np.array((4,16,3125*8))
+    for subject in range(4):
+        for trial in range(8):
+            a=eeg_epochs[subject,trial].get_data()
+        b[subject,:,trial*3125]=a
+    
+        eeg_epochs = epochs_clean
+        # Rolling ISC
         k=3
-        # Calculate ISC over time a given trial
-        eeg = get_trial_eeg(data, trial_index=trial)
-        thr, ISC_null = stats(eeg, k=k, n_surrogates=5)
-        ISC_values, ISC_total, W, time_values, num_windows, step_size = get_rolling_ISC(eeg, k=k)
-  
+        for trial in range(8):
+            a = eeg_epochs[:,trial]
+            a = [obj for obj in a if obj is not None]
+            if a != []:
+                a2 = np.empty((len(a),16,3125))
+                for i in range(len(a)):
+                    a2[i,:,:] = a[i].get_data()
+                eeg=a2
+                thr, ISC_null = stats(eeg, k=k, n_surrogates=200)
+                ISC_values, ISC_total, W, time_values, num_windows, step_size = get_rolling_ISC(eeg, k=k, fs=fs, window_s=2, overlap=0.8)
+            
+                # Plotting
+                fig, axes = plt.subplots(nrows=2 ,ncols=k, figsize=(4*k,7))
+                # Plot components topomaps
+                for ax, c in zip(axes[0,:], range(k)):
+                    ax.set_title("CorrC{}, ISC: {:.6f}".format(c+1, ISC_total[c]))
+                    im, cn = mne.viz.plot_topomap(W[:,c],pos=map_info,
+                                                   axes=ax, show=False, cmap = "RdBu_r",
+                                                   outlines = "head")
+                # Add colorbar
+                fig.colorbar(im, ax=axes[0,:].ravel().tolist(), shrink=0.9)
+            
+                # Plot ISC over time
+                plt.subplot(2,1,2)
+                plt.title('ISC values over time')
+                # Plot the ISC values for each component as line plots with respect to time
+                for component in range(k):
+                    plt.plot(time_values, ISC_values[:, component], label=f'CorrC{component + 1}')
+            
+                # Add threshold
+                plt.hlines(thr, xmin=0, xmax=time_values[-1], linestyles='dashed', label=f'Threshold: {thr:.6f}')
+                # Set plot title, labels, and legend
+                plt.xlabel('Time (s)')
+                plt.ylabel('ISC')
+                plt.legend()
+                plt.suptitle('Correlated Component Analysis - Trial {} - {} subjects'.format(trial, len(a)), y=0.99)
+                plt.show()
+
+if __name__ == '__main__':
+    main()
+
+
+"""
+a=[]
+b=np.array((4,16,3125*8))
+for subject in range(4):
+    for trial in range(8):
+        a=eeg_epochs[subject,trial].get_data()
+    b[subject,:,trial*3125]=a
+
+    eeg_epochs = epochs_clean
+    # Rolling ISC
+    k=3
+    for trial in range(8):
+        a = eeg_epochs[:,trial]
+        a = [obj for obj in a if obj is not None]
+        if a != []:
+            a2 = np.empty((len(a),16,3125))
+            for i in range(len(a)):
+                a2[i,:,:] = a[i].get_data()
+            eeg=a2
+            thr, ISC_null = stats(eeg, k=k, n_surrogates=200)
+            ISC_values, ISC_total, W, time_values, num_windows, step_size = get_rolling_ISC(eeg, k=k, fs=fs, window_s=2, overlap=0.8)
+        
+            # Plotting
+            fig, axes = plt.subplots(nrows=2 ,ncols=k, figsize=(4*k,7))
+            # Plot components topomaps
+            for ax, c in zip(axes[0,:], range(k)):
+                ax.set_title("CorrC{}, ISC: {:.6f}".format(c+1, ISC_total[c]))
+                im, cn = mne.viz.plot_topomap(W[:,c],pos=map_info,
+                                               axes=ax, show=False, cmap = "RdBu_r",
+                                               outlines = "head")
+            # Add colorbar
+            fig.colorbar(im, ax=axes[0,:].ravel().tolist(), shrink=0.9)
+        
+            # Plot ISC over time
+            plt.subplot(2,1,2)
+            plt.title('ISC values over time')
+            # Plot the ISC values for each component as line plots with respect to time
+            for component in range(k):
+                plt.plot(time_values, ISC_values[:, component], label=f'CorrC{component + 1}')
+        
+            # Add threshold
+            plt.hlines(thr, xmin=0, xmax=time_values[-1], linestyles='dashed', label=f'Threshold: {thr:.6f}')
+            # Set plot title, labels, and legend
+            plt.xlabel('Time (s)')
+            plt.ylabel('ISC')
+            plt.legend()
+            plt.suptitle('Correlated Component Analysis - Trial {} - {} subjects'.format(trial, len(a)), y=0.99)
+            plt.show()
+            #plt.savefig(f'D:\Downloads 2\Andre_Thesis\Analysis\CorrCA/CorrCA_clean{trial}')
+"""    
+    
+"""
+    eeg_epochs = epochs_nobads
+    # Rolling ISC
+    k=3
+    for trial in range(8):
+        a=[]
+        for subjectdata in eeg_epochs:
+            a.append(subjectdata[trial].get_data())
+        a = np.stack(a,axis=0)
+        eeg=a
+        thr, ISC_null = stats(eeg, k=k, n_surrogates=200)
+        ISC_values, ISC_total, W, time_values, num_windows, step_size = get_rolling_ISC(eeg, k=k, fs=fs, window_s=2, overlap=0.8)
+    
         # Plotting
         fig, axes = plt.subplots(nrows=2 ,ncols=k, figsize=(4*k,7))
         # Plot components topomaps
@@ -418,25 +542,29 @@ def main():
                                            outlines = "head")
         # Add colorbar
         fig.colorbar(im, ax=axes[0,:].ravel().tolist(), shrink=0.9)
-        
+    
         # Plot ISC over time
         plt.subplot(2,1,2)
         plt.title('ISC values over time')
         # Plot the ISC values for each component as line plots with respect to time
         for component in range(k):
             plt.plot(time_values, ISC_values[:, component], label=f'CorrC{component + 1}')
-        
+    
         # Add threshold
         plt.hlines(thr, xmin=0, xmax=time_values[-1], linestyles='dashed', label=f'Threshold: {thr:.6f}')
         # Set plot title, labels, and legend
         plt.xlabel('Time (s)')
         plt.ylabel('ISC')
         plt.legend()
-        plt.suptitle('Correlated Component Analysis - Trial {}'.format(trial+1), y=0.99)
-        plt.show()
-
-if __name__ == '__main__':
-    main()
+        plt.suptitle('Correlated Component Analysis - Trial {} - {} subjects'.format(trial, len(a)), y=0.99)
+        #plt.show()
+        plt.savefig(f'D:\Downloads 2\Andre_Thesis\Analysis\CorrCA/CorrCA_nobads{trial}')
+"""   
+    
+    
+    
+    
+    
     
     
     

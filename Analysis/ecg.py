@@ -92,7 +92,7 @@ plot_hrv_psd(rr_interpol, subject=1)
 #
 # Calculate correlation matrix
 #
-for trial in range(2): #   range(trial_count): 
+for trial in range(trial_count): 
     ecg_corr_matrix = np.zeros((subject_count, subject_count))
     for i in range(subject_count):
         ecg_i = rr_interpol[i][trial]
@@ -116,7 +116,7 @@ for trial in range(2): #   range(trial_count):
     # Plot ECG correlation
     plt.figure(figsize=(18,7))
     plt.subplot(1,2,1)
-    plt.suptitle('Inter-Subject Correlation - HR - trial {}'.format(trial+1))
+    plt.suptitle('Inter-Subject Correlation - HR - DREAMER trial {}'.format(trial+1))
     plt.imshow(ecg_corr_matrix, cmap='coolwarm', vmin=-1, vmax=1)
     plt.xlabel('Subject')
     plt.ylabel('Subject')
@@ -124,12 +124,12 @@ for trial in range(2): #   range(trial_count):
     plt.title('Correlation Matrix')
     
     plt.subplot(1,2,2)
-    plt.title('Average Pearsons correlation - ')
+    plt.title('Average Pearsons correlation')
     plt.boxplot(ecg_isc)
-    plt.text(0.5, ecg_isc_mean+ 0.01, f'Average = {ecg_isc_mean:.2f}', color='green', fontsize = 15)
-    plt.hlines(ecg_isc_mean, 0, subject_count, linestyles='dashed', color='green')
+    #plt.text(-0.5, ecg_isc_mean+ 0.01, f'Average = {ecg_isc_mean:.2f}', color='green', fontsize = 15)
+    #plt.hlines(ecg_isc_mean, 0, subject_count, linestyles='dashed', color='green')
     plt.xticks(range(1,1+subject_count),['Subject {}'.format(i+1) for i in range(subject_count)], rotation=60)
-    plt.ylabel('Pearson correlation')
+    plt.ylabel('Pearsons correlation coefficient')
     plt.show()
     
     
